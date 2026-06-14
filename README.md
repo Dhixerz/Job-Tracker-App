@@ -17,7 +17,7 @@ Download the `.exe` file, run it, and follow the on-screen instructions. The app
 If you want to run this application in development mode or modify the source code:
 
 1. Ensure you have **Node.js** installed on your computer.
-2. Open this project folder in your terminal/CMD: `C:\Trae AI Projects\job-application-tracker`
+2. Open your terminal/CMD and navigate to the project folder where you cloned or extracted the source code.
 3. Run the following command to install all dependencies:
    ```bash
    npm install
