@@ -42,7 +42,7 @@ This process will take about 30-60 seconds. Once completed, the new `.exe` file 
 
 ## Key Features
 
-- **Kanban Board**: Drag and drop your job applications across various statuses (Applied, Interviewing, Rejected, Offered).
+- **Tracker Board**: Drag and drop your job applications across various statuses (Applied, Interviewing, Rejected, Offered).
 - **LinkedIn Auto-Scraping**: Simply copy and paste a job posting link from LinkedIn, click "Track This Job", and all data will be automatically filled in (Title, Company, Location Type, Years of Experience, Point of Contact, etc).
 - **Flexible Currencies**: Track salaries using various currencies (IDR, USD, EUR, SGD, etc).
 - **Smart Filters**: Search for job applications based on Status, Location Type, or Company Name.
