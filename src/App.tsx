@@ -17,7 +17,8 @@ import {
   Edit2,
   AlertTriangle,
   Check,
-  Coffee
+  Coffee,
+  ArrowLeft
 } from 'lucide-react';
 import { DndContext, useSensor, useSensors, PointerSensor, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
@@ -51,6 +52,7 @@ const INITIAL_JOB_STATE: Partial<Job> = {
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [browserUrl, setBrowserUrl] = useState('https://www.linkedin.com/jobs/');
   const [jobs, setJobs] = useState<Job[]>(() => {
     const saved = localStorage.getItem('jobs');
     return saved ? JSON.parse(saved) : [];
@@ -110,9 +112,7 @@ function App() {
   // WebView Ref
   const webviewRef = useRef<any>(null);
 
-  // --- Handlers ---
-
-  const handleSaveClick = () => {
+    const handleSaveClick = () => {
     if (!currentJob.title || !currentJob.company) {
       setConfirmation({
         type: 'alert',
@@ -297,37 +297,198 @@ function App() {
     if (!webviewRef.current) return;
 
     try {
+      // Wait 2 seconds for LinkedIn to fully render the job detail panel
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       // Execute JavaScript in the webview to scrape data
       const data = await webviewRef.current.executeJavaScript(`
         (function() {
-          const getText = (selector) => document.querySelector(selector)?.innerText?.trim() || '';
-          const getMeta = (prop) => document.querySelector(\`meta[property="\${prop}"]\`)?.content || '';
-          
-          // 1. Try LinkedIn Specific Selectors (Classes change often, so these might fail)
-          let title = getText('.job-details-jobs-unified-top-card__job-title') || 
-                      getText('.t-24'); // Common LinkedIn header class
-                      
-          let company = getText('.job-details-jobs-unified-top-card__company-name') || 
-                        getText('.job-details-jobs-unified-top-card__company-name a') ||
-                        getText('.t-16'); // Common secondary text class
+          return new Promise((resolve) => {
+            let attempts = 0;
+            const interval = setInterval(() => {
+              attempts++;
+              
+              // Look for the main elements to confirm the page has loaded
+              const h1El = document.querySelector('h1');
+              const descEl = document.querySelector('.jobs-description__content, .jobs-box__html-content, #job-details, .jobs-description, .core-section-container__content');
+              
+              // If we find both, or we've tried for 10 seconds (20 * 500ms), proceed with scraping
+              if ((h1El && descEl) || attempts > 20) {
+                clearInterval(interval);
+                
+                                // Scope to the job detail panel (right side) to avoid nav bar elements
+                const jobPanel = document.querySelector('.jobs-search__job-details') ||
+                                 document.querySelector('.jobs-details') ||
+                                 document.querySelector('.scaffold-layout__detail') ||
+                                 document.querySelector('.job-view-layout') ||
+                                 document;
 
-          let location = getText('.job-details-jobs-unified-top-card__bullet');
+                                let title = '';
+                const titleEls = jobPanel.querySelectorAll('h1, .job-details-jobs-unified-top-card__job-title, .topcard__title');
+                for (const el of titleEls) {
+                  const t = el.innerText.trim();
+                  if (t.length > 0 && t.length < 150) {
+                    title = t;
+                    break;
+                  }
+                }
+                if (title) title = title.replace(/\\| LinkedIn/g, '').replace(/Job Application for /g, '').trim();
 
-          // 2. Fallback to Standard HTML Tags
-          if (!title) title = getText('h1');
-          if (!company) {
-             // Try to guess company from page title or subtitle
-             const h2s = Array.from(document.querySelectorAll('h2'));
-             if (h2s.length > 0) company = h2s[0].innerText; 
-          }
+                                let company = '';
+                const companyEls = jobPanel.querySelectorAll('.job-details-jobs-unified-top-card__company-name, .topcard__org-name-link, .topcard__flavor a, a[href*="/company/"]');
+                for (const el of companyEls) {
+                  const t = el.innerText.trim();
+                  // Avoid empty strings or extremely long strings
+                  if (t.length > 0 && t.length < 100) {
+                    company = t;
+                    break;
+                  }
+                }
 
-          // 3. Fallback to Meta Tags (OpenGraph) - usually very reliable
-          if (!title) title = getMeta('og:title');
-          
-          // Clean up title if it contains " | LinkedIn"
-          if (title) title = title.replace(' | LinkedIn', '').replace('Job Application for ', '');
+                                let location = '';
+                const topCard = jobPanel.querySelector('.job-details-jobs-unified-top-card__primary-description-container, .topcard__flavor-row, .job-details-jobs-unified-top-card__primary-description');
+                if (topCard) {
+                  const allText = topCard.innerText || '';
+                  const parts = allText.split(/[\\u00b7\\u2022\\n-]/).map(p => p.trim()).filter(p => p.length > 2);
+                  for (const part of parts) {
+                    if (/ago|clicked|people|Reposted|apply|Promoted|hirer|alumni/i.test(part)) continue;
+                    if (company && part.toLowerCase().includes(company.toLowerCase())) continue;
+                    if (/area|city|jakarta|indonesia|singapore|remote|hybrid|region|metro|state|province/i.test(part) || 
+                        ((part.charAt(0) < '0' || part.charAt(0) > '9') && part.length > 3 && part.length < 60)) {
+                      location = part;
+                      break;
+                    }
+                  }
+                }
 
-          return { title, company, location, link: window.location.href };
+                                let locationType = '';
+                const topCardEl = jobPanel.querySelector('.job-details-jobs-unified-top-card') || jobPanel;
+                const topCardText = (topCardEl.innerText || '').toLowerCase();
+                if (new RegExp('\\\\bremote\\\\b').test(topCardText)) locationType = 'Remote';
+                else if (new RegExp('\\\\bhybrid\\\\b').test(topCardText)) locationType = 'Hybrid';
+                else if (new RegExp('\\\\bon-site\\\\b').test(topCardText) || new RegExp('\\\\bonsite\\\\b').test(topCardText)) locationType = 'Onsite';
+                
+                if (!locationType) {
+                  const locLower = location.toLowerCase();
+                  if (locLower.includes('remote')) locationType = 'Remote';
+                  else if (locLower.includes('hybrid')) locationType = 'Hybrid';
+                  else locationType = 'Onsite';
+                }
+
+                                let yearsOfExperience = '';
+                const descText = descEl ? descEl.innerText : (jobPanel.innerText || '');
+                if (descText) {
+                  const lines = descText.split('\\n');
+                  for (const line of lines) {
+                    const lower = line.toLowerCase();
+                    const yearIdx = lower.indexOf('year');
+                    if (yearIdx === -1) continue;
+                    const before = line.substring(Math.max(0, yearIdx - 20), yearIdx);
+                    const tokens = before.trim().split(/[^0-9]+/);
+                    const numTokens = tokens.filter(t => t.length > 0);
+                    if (numTokens.length > 0) {
+                      const num = parseInt(numTokens[numTokens.length - 1]);
+                      if (!isNaN(num) && num > 0 && num < 30) {
+                        if (lower.includes('experience') || lower.includes('working') || 
+                            lower.includes('professional') || lower.includes('pengalaman') ||
+                            lower.includes('kerja') || line.includes('+') || lower.includes('min')) {
+                          yearsOfExperience = String(num);
+                          break;
+                        }
+                      }
+                    }
+                  }
+                  if (!yearsOfExperience) {
+                    const words = descText.split(/\\s+/);
+                    for (let i = 0; i < words.length; i++) {
+                      if (words[i].toLowerCase().startsWith('year') || words[i].toLowerCase().startsWith('tahun')) {
+                        for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+                          const cleaned = words[j].replace(/[^0-9]/g, '');
+                          if (!cleaned) continue;
+                          const num = parseInt(cleaned);
+                          if (!isNaN(num) && num > 0 && num < 30) {
+                            yearsOfExperience = String(num);
+                            break;
+                          }
+                        }
+                        if (yearsOfExperience) break;
+                      }
+                    }
+                  }
+                }
+
+                                let pointOfContact = '';
+                const headings = jobPanel.querySelectorAll('h2, h3, span.t-bold, strong');
+                let contactSection = null;
+                let contactPrefix = '[Reach Out]';
+                
+                for (const h of headings) {
+                  const hText = (h.innerText || '').trim().toLowerCase();
+                  if (hText.includes('reach out')) {
+                    contactSection = h.closest('section') || h.closest('div[class*="card"]') || h.parentElement?.parentElement;
+                    contactPrefix = '[Reach Out]';
+                    break;
+                  }
+                  if (hText.includes('hiring team')) {
+                    contactSection = h.closest('section') || h.closest('div[class*="card"]') || h.parentElement?.parentElement;
+                    contactPrefix = '[Hiring Team]';
+                    break;
+                  }
+                }
+
+                if (contactSection) {
+                  const links = contactSection.querySelectorAll('a[href*="/in/"]');
+                  const contacts = [];
+                  const seenNames = new Set();
+                  for (const link of links) {
+                    let name = '';
+                    const nameEl = link.querySelector('.artdeco-entity-lockup__title') || 
+                                   link.querySelector('span[dir="ltr"]') ||
+                                   link.querySelector('span');
+                    if (nameEl) name = nameEl.innerText.trim();
+                    else name = link.innerText.trim();
+                    
+                    name = name.split('\\n')[0].trim();
+                    if (name.indexOf('·') > -1) name = name.substring(0, name.indexOf('·')).trim();
+                    
+                    let href = link.href || '';
+                    if (href.includes('/in/')) href = href.split('?')[0];
+                    
+                    if (name.toLowerCase().includes('profile photo')) continue;
+                    
+                    if (name && name.length > 1 && name.length < 60 && 
+                        !name.toLowerCase().includes('message') && 
+                        !seenNames.has(href)) {
+                      seenNames.add(href);
+                      contacts.push(contactPrefix + ' ' + name + ': ' + href);
+                    }
+                  }
+                  pointOfContact = contacts.join('\\n');
+                }
+
+                                let jobLink = '';
+                const currentUrl = window.location.href;
+                const urlParams = new URLSearchParams(window.location.search);
+                const jobId = urlParams.get('currentJobId');
+                if (jobId) {
+                  jobLink = 'https://www.linkedin.com/jobs/view/' + jobId + '/';
+                } else {
+                  const viewIdx = currentUrl.indexOf('/jobs/view/');
+                  if (viewIdx > -1) {
+                    const afterView = currentUrl.substring(viewIdx + 11);
+                    const idEnd = afterView.search(/[^0-9]/);
+                    const extractedId = idEnd > 0 ? afterView.substring(0, idEnd) : afterView;
+                    if (extractedId) jobLink = 'https://www.linkedin.com/jobs/view/' + extractedId + '/';
+                    else jobLink = currentUrl.split('?')[0];
+                  } else {
+                    jobLink = currentUrl.split('?')[0];
+                  }
+                }
+
+                resolve({ title, company, location, locationType, yearsOfExperience, pointOfContact, link: jobLink });
+              }
+            }, 500);
+          });
         })()
       `);
 
@@ -338,7 +499,9 @@ function App() {
         title: data.title,
         company: data.company,
         location: data.location,
-        locationType: data.location?.toLowerCase().includes('remote') ? 'Remote' : 'Onsite',
+        locationType: data.locationType || 'Onsite',
+        yearsOfExperience: data.yearsOfExperience || '',
+        pointOfContact: data.pointOfContact || '',
         link: data.link,
         status: 'Applied'
       });
@@ -457,9 +620,34 @@ function App() {
         {activeTab === 'browser' && (
           <div className="browser-view">
             <div className="browser-toolbar">
-              <div className="url-bar">
+              <button
+                onClick={() => webviewRef.current?.goBack()}
+                title="Go Back"
+                style={{ padding: '8px', marginRight: '8px', borderRadius: '6px', background: 'transparent', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b' }}
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <div className="url-bar" style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
                 <Search size={14} />
-                <span>LinkedIn Job Search</span>
+                <input
+                  type="text"
+                  placeholder="Paste LinkedIn job link here..."
+                  onPaste={(e) => {
+                    const pastedText = e.clipboardData.getData('text');
+                    if (pastedText.startsWith('http')) {
+                      setBrowserUrl(pastedText);
+                      // Let the native paste occur or manually set value. The native paste happens after onPaste.
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      let val = e.currentTarget.value;
+                      if (val && !val.startsWith('http')) val = 'https://' + val;
+                      if (val) setBrowserUrl(val);
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', outline: 'none', color: 'inherit', width: '100%', marginLeft: '8px' }}
+                />
               </div>
               <button className="track-btn" onClick={handleTrackJob}>
                 <Save size={16} /> Track This Job
@@ -467,7 +655,7 @@ function App() {
             </div>
             <webview
               ref={webviewRef}
-              src="https://www.linkedin.com/jobs/"
+              src={browserUrl}
               style={{ width: '100%', height: '100%', border: 'none' }}
               // @ts-ignore: electron webview tag
               allowpopups="true"

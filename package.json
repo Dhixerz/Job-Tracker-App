@@ -1,8 +1,28 @@
 {
   "name": "job-application-tracker",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.23",
+  "author": "Job Tracker Team",
+  "description": "A desktop application to track job applications.",
   "main": "dist-electron/main.js",
+  "build": {
+    "appId": "com.jobtracker.app",
+    "productName": "Job Tracker",
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "files": [
+      "dist",
+      "dist-electron"
+    ]
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
@@ -16,6 +36,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "axios": "^1.17.0",
     "lucide-react": "^0.563.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

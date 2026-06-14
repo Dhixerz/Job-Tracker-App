@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+# Job Application Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React and Electron-based desktop application to easily and quickly track your job applications.
 
-Currently, two official plugins are available:
+## How to Use
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This application has been packaged into an installer (`.exe`) file so you can directly install and use it.
 
-## React Compiler
+### 1. Install the Application
+If you haven't installed it yet, please run the following installation file:
+`dist/Job Tracker Setup 2.0.23.exe` (or the latest version available in the `dist` folder).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Follow the on-screen instructions, and the application will be automatically installed and can be opened via the Desktop shortcut.
 
-## Expanding the ESLint configuration
+### 2. How to Run for Development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+If you want to run this application in development mode or modify the source code:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. Ensure you have **Node.js** installed on your computer.
+2. Open this project folder in your terminal/CMD: `C:\Trae AI Projects\job-application-tracker`
+3. Run the following command to install all dependencies:
+   ```bash
+   npm install
+   ```
+4. Once the installation is complete, run the following command to start the application in development mode:
+   ```bash
+   npm run dev
+   ```
+   *This command will start the React server (Vite) and simultaneously open the Electron window.*
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 3. How to Build a New Version
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+If you have made changes to the source code and want to create a new `.exe` installation file, run the following command:
+
+```bash
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+This process will take about 30-60 seconds. Once completed, the new `.exe` file will be available in the `dist\` folder.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Key Features
+
+- **Kanban Board**: Drag and drop your job applications across various statuses (Applied, Interviewing, Rejected, Offered).
+- **LinkedIn Auto-Scraping**: Simply copy and paste a job posting link from LinkedIn, click "Track This Job", and all data will be automatically filled in (Title, Company, Location Type, Years of Experience, Point of Contact, etc).
+- **Flexible Currencies**: Track salaries using various currencies (IDR, USD, EUR, SGD, etc).
+- **Smart Filters**: Search for job applications based on Status, Location Type, or Company Name.
