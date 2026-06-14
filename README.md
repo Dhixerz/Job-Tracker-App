@@ -6,13 +6,13 @@ A React and Electron-based desktop application to easily and quickly track your 
 
 This application has been packaged into an installer (`.exe`) file so you can directly install and use it.
 
-### 1. Install the Application
-If you haven't installed it yet, please run the following installation file:
-`dist/Job Tracker Setup 2.0.23.exe` (or the latest version available in the `dist` folder).
+### Option 1: Install the Pre-built Application
+Since the installer files are too large for GitHub, you can download the ready-to-use `.exe` installer directly from this link:
+**[Download Job Tracker Installer (Google Drive)](https://drive.google.com/drive/folders/1pD419Uxqoux2YB0OAp_xiQWswCz2oUzm?usp=sharing)**
 
-Follow the on-screen instructions, and the application will be automatically installed and can be opened via the Desktop shortcut.
+Download the `.exe` file, run it, and follow the on-screen instructions. The application will be automatically installed and can be opened via the Desktop shortcut.
 
-### 2. How to Run for Development
+### Option 2: How to Run for Development
 
 If you want to run this application in development mode or modify the source code:
 
@@ -28,7 +28,7 @@ If you want to run this application in development mode or modify the source cod
    ```
    *This command will start the React server (Vite) and simultaneously open the Electron window.*
 
-### 3. How to Build a New Version
+### Option 3: How to Build a New Version
 
 If you have made changes to the source code and want to create a new `.exe` installation file, run the following command:
 
